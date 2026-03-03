@@ -6,3 +6,6 @@ paper/*.pdf
 
 # Local symlink to REMARK standards repo
 REMARK
+
+# Local prompts (not for public distribution)
+prompts_local/**
