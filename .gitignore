@@ -3,3 +3,6 @@ _build
 
 # Original paper PDFs (not for public distribution)
 paper/*.pdf
+
+# Local symlink to REMARK standards repo
+REMARK
