@@ -1,6 +1,8 @@
-language: python
-python:
-  - "3.10.9"
-# command to install dependencies
-install:
-  - pip install -r requirements.txt
+name: imaikeane-replication
+channels:
+  - defaults
+dependencies:
+  - python=3.10.9
+  - pip
+  - pip:
+    - -r requirements.txt

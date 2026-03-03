@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the replication and the original paper."
+title: "Replication of Imai and Keane (2004): Intertemporal Labor Supply and Human Capital Accumulation"
+type: software
+authors:
+  - family-names: Green
+    given-names: John R.
+repository-code: https://github.com/econ-ark/ImaiKeane_replication
+license: MIT
+keywords:
+  - labor supply
+  - human capital accumulation
+  - intertemporal elasticity of substitution
+  - lifecycle model
+  - dynamic programming
+  - endogenous grid method
+  - replication
+preferred-citation:
+  type: article
+  title: "Intertemporal Labor Supply and Human Capital Accumulation"
+  authors:
+    - family-names: Imai
+      given-names: Susumu
+    - family-names: Keane
+      given-names: Michael P.
+  journal: "International Economic Review"
+  publisher:
+    name: Wiley
+  volume: 45
+  issue: 2
+  start: 601
+  end: 641
+  year: 2004
+  month: 5
+  doi: "10.1111/j.1468-2354.2004.00138.x"
+  issn: "0020-6598"

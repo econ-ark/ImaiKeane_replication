@@ -1,2 +1,5 @@
 # MyST build outputs
 _build
+
+# Original paper PDFs (not for public distribution)
+paper/*.pdf

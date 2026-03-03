@@ -1,88 +1,246 @@
-# Imai and Keane (2004) replication
+# Imai and Keane (2004) Replication
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/JohnRGreen/ImaiKeane_replication/HEAD)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/econ-ark/ImaiKeane_replication/HEAD)
+
+**Replication of**: Imai, S. and Keane, M. P. (2004), "Intertemporal Labor Supply and Human Capital Accumulation," *International Economic Review*, 45(2), 601--641. [DOI: 10.1111/j.1468-2354.2004.00138.x](https://doi.org/10.1111/j.1468-2354.2004.00138.x)
+
+**Status**: Reproducible REMARK (Tier 2)
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [The Model](#the-model)
+3. [Installation](#installation)
+4. [Reproduction Instructions](#reproduction-instructions)
+5. [Code Organization](#code-organization)
+6. [Output Guide](#output-guide)
+7. [Parameter Modification Guide](#parameter-modification-guide)
+8. [Data](#data)
+9. [System Requirements](#system-requirements)
+10. [Citation](#citation)
+11. [License](#license)
+
+---
 
 ## Overview
 
-This repository aims to replicate the lifecycle savings and labor supply model presented in [Imai and Keane (2004)](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1468-2354.2004.00138.x). The replication is done in Python. 
+This repository replicates the lifecycle savings and labor supply model of [Imai and Keane (2004)](https://doi.org/10.1111/j.1468-2354.2004.00138.x) in Python. It is a contribution to the [REMARK](https://github.com/econ-ark/REMARK) project at [Econ-ARK](https://github.com/econ-ark).
 
-This work represents a direct contribution to the [REMARK](https://github.com/econ-ark/REMARK) project led by the open-source community at [Econ-ARK](https://github.com/econ-ark). The primary objective of REMARK is to promote reproducibility and transparency across computational economics.
+### Research Question
 
-The central piece of this repository is an educational and interactive Jupyter Notebook. This notebook reviews the insights of the original paper, breaking down the model and introducing the computational machinery and algorithms necessary for a complete replication.
+Why do conventional microeconometric estimates of the intertemporal elasticity of substitution (IES) in labor supply yield values near zero, while macroeconomic models require values of 2 or higher to match business-cycle facts?
 
-## Paper Summary and Objectives
+### Methods
 
-Imai and Keane (2004) studies the dynamics of lifecycle savings and labor supply decisions when wages are endogenous. At its core, the study highlights how the accumulation of human capital may explain the divergence between micro- and macro-estimates of the intertemporal elasticity of subsitution.
+Imai and Keane solve a continuous-variable dynamic programming problem in which agents choose consumption and labor hours each period, accumulating human capital through learning by doing. They estimate the model by maximum likelihood on white male data from the NLSY79, using a backward-induction algorithm with Chebyshev polynomial interpolation and Gauss-Hermite quadrature.
 
-The authors established that when the future return to human capital is appropriately accounted for in the modeling, the elasticity of intertemporal substitution in labor supply emerges significantly higher than estimated by preceding, less nuanced models.
+This replication solves the same dynamic programming problem for three progressively richer parameter configurations and simulates 10,000 agents forward from age 20 to retirement.
 
-By shifting this paradigm into Python, we ensure that the model behaves transparently and is accessible to researchers, academics, and students alike within the broader economics community.
+### Key Results
 
-An hour of work today rewards the agent with income, but it also increases utility through the rest of the lifecycle by increasing human capital and thus leading to higher earnings throughout the lifecycle. Because of this dynamic, at younger ages the true return to work may be much larger than the observed wage. When agents are older, their wages are higher but the returns to increased human capital are lower because they have fewer future years of work. The net result is a reasonably flat shadow wage which captures the net returns to work.
+The estimated IES is 3.82, far above conventional micro estimates (0.1--1.7). The bias in conventional estimates arises because human capital accumulation makes the shadow wage (marginal rate of substitution between labor and consumption) much higher than the observed wage for young workers. The shadow wage profile is relatively flat over the lifecycle even though observed wages rise steeply, which reconciles a high IES with the near-flat observed hours profile.
 
-If the econometrician focuses solely on the variation between hourly wage and hours of work, the reasonably flat lifetime profile of hours and reasonably steep profile of wages will erroneously suggest a weak relationship between the two. Accounting for the full returns to work inclusive of human capital accumulation leads to a much higher responsiveness and leads to the higher i.e.s. that Imai and Keane find.
+---
 
 ## The Model
 
-The utility function modeled has agents receive utility from consumption, given by a CRRA specification. In order to discourage agents from borrowing when young to smooth consumption, the authors introduce age effects into utility. They do so with a linear spline $A(s_t)$ where $s_t$ is the agent's age at time period $t$. $A(s_t) = C_0 C_1$ at age 20, gradually moves to $C_0 C_2$ at age 25, and ends at $C_0$ at age 33, whree it remains for the rest of the lifecycle.
+Agents maximize discounted expected lifetime utility over a working horizon from age 20 to 65:
 
-Wages are determined by human capital in a perfectly competitive labor market. Workers receive a rental rate for their human capital. Because the market is competitive and human capital is homogeneous, the wage rate is directly tied to the level of human capital an agent possesses.
+$$E_t \sum_{\tau=t}^{T} \beta^\tau \left[ u(C_\tau, \tau) - v(h_\tau, \varepsilon_{2,\tau}) \right]$$
 
-A complication emerges here because I solve the problem with *no borrowing* so that $M_t>0$ always. At some grid points in $T$, it may be that the agent must have had $M_{T-1} < 0$ and thus the EGM step will result in negative market resources. We need to handle this carefully, because we cannot perform EGM at points where the agent was not strictly following the FOCs of the problem.
+where consumption utility is CRRA with age effects, $u(C,t) = A(t) C^{a_1}/a_1$, and disutility of labor is $v(h, \varepsilon_2) = \varepsilon_2 b h^{a_2}/a_2$. The IES equals $1/(a_2 - 1)$.
 
-First, I loop through the points of $n_K$ to find the level of $M_{T-1}$ at which an agent with human capital $K_{T-1,j}$ would have $c_{T-1} >= M_{T-1}$ (eg the point at which they become credit constrained). When the EGM results in some levels of $M_{T-1}$ associated with human capital grid point $j$ which are negative, I isolate the last negative grid point $M_{T-1}^{- j}$ and the first positive gridpoint $M_{T-1}^{+ j}$. I perform a linear interpolation to find the point between these two points at which the agent consumes $c_{T-1,j} = M_{T-1}^{0 j}$.
+The budget constraint is $A_{t+1} = (1+r)A_t + W_t h_t - C_t$, with wages $W_t = R_s K_t$ determined by a competitive rental rate on human capital $K_t$.
 
-## Repository Architecture
+Human capital evolves via a production function that features complementarity between current hours and current human capital:
 
-This codebase is systematically organized to isolate specific concerns and enable easy navigation:
+$$K_{t+1} = \left[k_0 + \delta K_t + A_0(1 + A_1(t-19))(B_1 + K_t)\left[(h_t + d_1)^\alpha - B_2(h_t + d_1)\right]\right] \varepsilon_{1,t+1}$$
 
-*   **`binder/`**: The directory dedicated to the interactive Binder environment configuration. It houses `environment.yml` for broad Python environment definitions and `requirements.txt` identifying specific dependency versions.
-*   **`data/`**: The folder containing pre-processed datasets or configuration files specifically formatted to feed the replication processes.
-*   **`auxcode/`**: A supplementary folder comprising underlying helper functions, solvers, and utilities. This code is imported and leveraged by the main notebook, keeping the educational notebook clean and readable.
-*   **`results/`**: A folder intended to catch the generated outputs, tables, and serialized representations arising from the completed replication runs.
-*   **`Imai_and_Keane_2004.ipynb`**: The flagship Jupyter Notebook. It acts as both a written review of the paper and a step-by-step interactive demonstration of the reproduction code.
-*   **`reproduce.sh`**: A top-level bash script functioning as the primary entry point for executing the entire replication automatically. 
-*   **`do_all.py`**: A centralized Python orchestration script that executes the computational load when triggered by `reproduce.sh`.
-*   **`myst.yml`**: A configuration file enabling seamless integration with the MyST Markdown system for enhanced documentation rendering.
+The age effects $A(t)$ are a linear spline: $A(t) = C_0 C_1$ at age 20, rising to $C_0 C_2$ at age 25, then to $C_0$ at age 33 where it remains constant.
 
-## Quickstart and Execution Guide
+This replication imposes a no-borrowing constraint ($M_t > 0$) and handles the resulting credit-constrained region via interpolation at the boundary where the agent's consumption equals market resources.
 
-### Reproducing with Docker (Recommended)
+---
 
-To run the replication completely isolated from your host system using Docker, ensuring that environmental factors do not interfere with the results:
+## Installation
 
-1. Clone the project locally: `git clone https://github.com/JohnRGreen/ImaiKeane_replication.git`
-2. Navigate into the folder: `cd ImaiKeane_replication`
-3. Process the `Dockerfile` to create an image: `docker build -t imai_keane_container .`
-4. Deploy the replication via a disposable container shell: `docker run --rm imai_keane_container`
-5. The output should be successfully captured the `results` directory. 
+### Option 1: Docker (Recommended)
 
-### Executing Natively
+```bash
+git clone https://github.com/econ-ark/ImaiKeane_replication.git
+cd ImaiKeane_replication
+docker build -t imai_keane .
+docker run --rm imai_keane
+```
 
-If you prefer executing the code directly on your local workstation without Docker abstraction:
+### Option 2: Conda
 
-1. Confirm that Python 3.10 or a slightly newer compatible version is cleanly installed in your path.
-2. Initialize a local virtual environment to avoid polluting host packages.
-3. Install dependencies from the `binder` specification: `pip install -r binder/requirements.txt`
-4. Trigger the end-to-end execution workflow by simply invoking: `./reproduce.sh`
-5. Alternatively, run the python file directly: `python do_all.py`
+```bash
+git clone https://github.com/econ-ark/ImaiKeane_replication.git
+cd ImaiKeane_replication
+conda env create -f binder/environment.yml
+conda activate imaikeane-replication
+./reproduce.sh
+```
 
-## Current Progress and Next Steps
+### Option 3: pip (native)
 
-This repository is currently tagged as a work in progress. While the foundational scaffolding, environments, and basic solvers exist, we expect continuous iterations moving forward. The logic will be frequently updated with improved algorithms, enriched methodologies, and finalized replication matrices. We are actively aiming to provide full parity with the outputs highlighted in the original Imai and Keane publication.
+```bash
+git clone https://github.com/econ-ark/ImaiKeane_replication.git
+cd ImaiKeane_replication
+python -m venv .venv && source .venv/bin/activate
+pip install -r binder/requirements.txt
+./reproduce.sh
+```
 
-## Contributor Guidelines
+---
 
-We aim to keep this repository well-documented. If you'd like to help test the accuracy of the structural economic models, debug dependencies, or port the legacy code, please submit a pull request against the active branch. Ensure `reproduce.sh` works seamlessly before marking your pull request as ready for review.
+## Reproduction Instructions
 
-### Coding Approach
+### Full Reproduction
 
-The repository follows a test-driven development cycle locally to prevent regressions. All major equations and model transformations are coded modularly to permit isolation tracing.
+```bash
+./reproduce.sh
+```
 
-### Reporting Issues
+**Expected runtime**: ~22 minutes on a modern laptop.
 
-When reporting an issue, clearly list out the parameters, dataset utilized, and python runtime environment so we can smoothly troubleshoot the unexpected behaviour.
+The script installs dependencies (if not already present) and runs `do_all.py`, which solves the model under three parameter configurations, simulates agents, and generates figures.
 
-## License and Terms of Use
+### Step-by-Step Manual Reproduction
 
-This project and entirely of its corresponding code is distributed openly under the permissive MIT License. Please consult the supplementary `LICENSE` file found at the root of the repository for detailed warranty disclaimers and specific attribution terms.
+```bash
+pip install -r binder/requirements.txt
+python do_all.py
+```
+
+`do_all.py` executes five stages:
+1. Setup: load data, build grids, import auxiliary functions
+2. Solve and simulate with no uncertainty and no wage growth (sigma=0, G=0)
+3. Solve and simulate with uncertainty and no wage growth (sigma=0.05, G=0)
+4. Solve and simulate with uncertainty and wage growth (sigma=0.05, G>0)
+5. Generate and save comparison figures
+
+### Interactive Exploration
+
+Launch the Jupyter notebook for an annotated walkthrough:
+
+```bash
+jupyter notebook Imai_and_Keane_2004.ipynb
+```
+
+---
+
+## Code Organization
+
+```
+.
+├── do_all.py                     # Main orchestration script
+├── reproduce.sh                  # Entry point for full reproduction
+├── Imai_and_Keane_2004.ipynb     # Annotated Jupyter notebook
+├── auxcode/
+│   ├── solveproblem.py           # Backward-induction solver (EGM, credit constraints, quadrature)
+│   ├── simulate.py               # Forward simulation of agents using policy functions
+│   ├── getGrid.py                # Grid construction (log, linear, power spacing)
+│   ├── discretize_log_distribution.py  # Log-normal quadrature nodes and weights
+│   ├── getH.py                   # Optimal labor at the credit constraint boundary
+│   └── getmeanpath.py            # Mean path and moment-matching utilities
+├── data/
+│   ├── startingHCmean97.csv      # Mean initial human capital (NLSY97)
+│   ├── startingHCsd.csv          # Std dev of initial human capital
+│   ├── startingAmean97.csv       # Mean initial assets
+│   └── startingAsd.csv           # Std dev of initial assets
+├── results/
+│   ├── output1/                  # Scenario 1: sigma=0, G=0
+│   ├── output2/                  # Scenario 2: sigma>0, G=0
+│   ├── output3/                  # Scenario 3: sigma>0, G>0
+│   └── figs/                     # Generated figures
+├── binder/
+│   ├── environment.yml           # Conda environment specification
+│   └── requirements.txt          # Pinned pip dependencies
+├── Dockerfile                    # Docker configuration
+├── REMARK.md                     # REMARK metadata
+├── CITATION.cff                  # Citation metadata
+├── ImaiKeaneLifeCycle.bib        # BibTeX for the original paper
+├── myst.yml                      # MyST documentation config
+└── LICENSE                       # MIT License
+```
+
+---
+
+## Output Guide
+
+Running `reproduce.sh` generates the following outputs:
+
+### Policy Functions and Simulation Data (per scenario)
+
+Each `results/outputN/` directory contains:
+- `policyC.npy` -- optimal consumption policy (grid: market resources x human capital x age)
+- `policyH.npy` -- optimal hours policy
+- `endk.npy` -- end-of-period human capital
+- `policyM.npy` -- market resources mapping
+- `simdf.csv` -- simulated panel of 10,000 agents (columns: age, assets, consumption, hours, human capital)
+
+### Figures
+
+- `results/figs/assets_consumption_across_age.png` -- mean assets and consumption by age across all three scenarios
+- `results/figs/laborsupply_across_age.png` -- mean labor supply by age across all three scenarios
+
+---
+
+## Parameter Modification Guide
+
+Key model parameters are defined in `do_all.py`:
+
+**Preferences** (line 88):
+- `phi` (=3): CRRA consumption parameter
+- `beta` (=0.98): discount factor
+- `gamma` (=0.75): related to age effects
+- `sigma`: std dev of human capital shock (0 or 0.05)
+- `alpha` (=0.02): human capital production elasticity
+- `eta` (=1.25): disutility of labor curvature
+
+**Grid resolution** (line 33):
+- `nM` (=100): grid points for market resources
+- `nK` (=100): grid points for human capital
+- `nq` (=6): quadrature points
+
+To run a quick test, reduce `nM` and `nK` to 20 and `nq` to 3.
+
+---
+
+## Data
+
+The `data/` directory contains initial conditions drawn from the NLSY97:
+- `startingHCmean97.csv` / `startingHCsd.csv`: mean and standard deviation of initial human capital by education group
+- `startingAmean97.csv` / `startingAsd.csv`: mean and standard deviation of initial asset holdings by education group
+
+These calibration targets pin down the distribution of agents at age 20.
+
+---
+
+## System Requirements
+
+- **Python**: 3.10+
+- **Key packages**: numpy 1.24, scipy 1.10, pandas 2.1, matplotlib 3.8, scikit-learn 1.3
+- **RAM**: ~2 GB
+- **Disk**: ~100 MB (results)
+- **Runtime**: ~22 minutes (full), ~3 minutes (reduced grid)
+- **Docker**: 20.0+ (if using containerized reproduction)
+
+---
+
+## Citation
+
+If you use this code, please cite both the replication and the original paper. See `CITATION.cff` for machine-readable metadata.
+
+**Original paper**:
+> Imai, S. and Keane, M. P. (2004). "Intertemporal Labor Supply and Human Capital Accumulation." *International Economic Review*, 45(2), 601--641. DOI: [10.1111/j.1468-2354.2004.00138.x](https://doi.org/10.1111/j.1468-2354.2004.00138.x)
+
+---
+
+## License
+
+This project is distributed under the MIT License. See [LICENSE](LICENSE) for details.
